@@ -48,6 +48,7 @@
 #include "src/filemanager/midnight.h"   /* the_menubar */
 
 #include "internal.h"
+#include "imgviewer.h"
 
 /*** global variables ****************************************************************************/
 
@@ -271,10 +272,25 @@ mcview_load (mcview_t * view, const char *command, const char *file, int start_l
 {
     gboolean retval = FALSE;
     vfs_path_t *vpath = NULL;
+    gboolean redrawn = FALSE;
+    int vleft, vtop, vwidth, vheight;
 
 #ifdef HAVE_ASSERT_H
     assert (view->bytes_per_line != 0);
 #endif
+
+    vleft = WIDGET(view)->x + view->data_area.left + 1;
+    vtop = WIDGET(view)->y + view->data_area.top + 1;
+    vwidth = view->data_area.width - 2;
+    vheight = view->data_area.height - 2;
+
+    if (view->requires_repaint) {
+        clear_area(vleft, vtop, vwidth, vheight);
+
+        repaint_screen();
+        view->requires_repaint = FALSE;
+        redrawn = TRUE;
+    }
 
     view->filename_vpath = vfs_path_from_str (file);
 
@@ -397,7 +413,29 @@ mcview_load (mcview_t * view, const char *command, const char *file, int start_l
 
                 g_free (tmp_filename);
             }
-            mcview_set_datasource_file (view, fd, &st);
+
+            if (is_image_file(file)) {
+                if (!redrawn) {
+                    clear_area(vleft, vtop, vwidth, vheight);
+
+                    repaint_screen();
+                }
+
+
+                if(vfs_file_is_local(vpath)) {
+                    draw_image_file(file, vleft, vtop, vwidth, vheight);
+                }
+                else {
+                    mc_lseek (fd, 0, SEEK_SET);
+                    draw_image_fd(fd, vleft, vtop, vwidth, vheight);
+                }
+                mc_close(fd);
+                fd = -1;
+                view->requires_repaint = TRUE;
+            }
+            else {
+                mcview_set_datasource_file (view, fd, &st);
+            }
         }
         retval = TRUE;
     }

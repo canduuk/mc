@@ -209,6 +209,8 @@ struct mcview_struct
     int *dir_idx;               /* Index of current file in dir structure.
                                  * Pointer is used here as reference to WPanel::dir::count */
     vfs_path_t *ext_script;     /* Temporary script file created by regex_command_for() */
+
+    gboolean requires_repaint;  /* Force a full redraw on next load */
 };
 
 typedef struct mcview_nroff_struct
